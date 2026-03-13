@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>辞書 — Jisho Anki Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Noto+Sans+JP:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white: #fafaf7;
+    --paper: #f2ede4;
+    --ink: #1a1714;
+    --ink-light: #3d3830;
+    --red: #c0392b;
+    --red-light: #e74c3c;
+    --red-pale: rgba(192,57,43,0.08);
+    --gold: #b8860b;
+    --muted: #8a8070;
+    --border: rgba(26,23,20,0.1);
+    --border-strong: rgba(26,23,20,0.2);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--white);
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* BACKGROUND */
+  .bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(26,23,20,0.03) 79px, rgba(26,23,20,0.03) 80px),
+      repeating-linear-gradient(0deg, transparent, transparent 79px, rgba(26,23,20,0.03) 79px, rgba(26,23,20,0.03) 80px);
+  }
+
+  /* RED STRIPE */
+  .red-stripe {
+    position: fixed;
+    top: 0; left: 0;
+    width: 6px;
+    height: 100vh;
+    background: var(--red);
+    z-index: 10;
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 32px 100px 48px;
+  }
+
+  /* HEADER */
+  header {
+    margin-bottom: 48px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .header-left {}
+
+  .jp-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--red);
+    margin-bottom: 8px;
+    font-weight: 300;
+  }
+
+  h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  h1 span {
+    color: var(--red);
+  }
+
+  .subtitle {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .source-badges {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .source-badge {
+    padding: 4px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .source-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #27ae60;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* SEARCH */
+  .search-section {
+    margin-bottom: 40px;
+  }
+
+  .search-box {
+    display: flex;
+    gap: 0;
+    border: 2px solid var(--ink);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+    max-width: 600px;
+  }
+  .search-box:focus-within {
+    box-shadow: 4px 4px 0 var(--red);
+  }
+
+  #searchInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 14px 20px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 22px;
+    background: white;
+    color: var(--ink);
+  }
+  #searchInput::placeholder {
+    color: rgba(26,23,20,0.25);
+    font-size: 18px;
+  }
+
+  .search-btn {
+    background: var(--ink);
+    color: white;
+    border: none;
+    padding: 0 28px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .search-btn:hover { background: var(--red); }
+  .search-btn:disabled { opacity: 0.5; cursor: not-allowed; background: var(--ink); }
+
+  /* TABS for bulk */
+  .mode-row {
+    display: flex;
+    gap: 0;
+    margin-top: 16px;
+    border-bottom: 2px solid var(--border);
+    max-width: 600px;
+  }
+
+  .mode-btn {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+  }
+  .mode-btn.active {
+    color: var(--red);
+    border-bottom-color: var(--red);
+  }
+
+  /* BULK INPUT */
+  #bulkSection {
+    display: none;
+    margin-top: 16px;
+    max-width: 600px;
+  }
+
+  #bulkInput {
+    width: 100%;
+    height: 100px;
+    border: 2px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 16px;
+    color: var(--ink);
+    background: white;
+    outline: none;
+    resize: vertical;
+    line-height: 1.7;
+    transition: border-color 0.2s;
+  }
+  #bulkInput:focus { border-color: var(--ink); }
+
+  .bulk-controls {
+    display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap;
+  }
+
+  /* STATUS */
+  .status {
+    margin-top: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    display: flex; align-items: center; gap: 8px;
+    max-width: 600px;
+  }
+  .status.loading { color: var(--gold); }
+  .status.error { color: var(--red); }
+  .status.success { color: #27ae60; }
+
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid rgba(184,134,11,0.3);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* CARD */
+  .card-wrap {
+    margin-bottom: 40px;
+    animation: slideIn 0.35s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes slideIn {
+    from { opacity:0; transform: translateY(16px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+
+  .card {
+    background: white;
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow: 6px 6px 0 var(--ink);
+  }
+
+  .card-top {
+    padding: 28px 32px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .word-block {}
+
+  .word-kanji {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .word-reading {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 20px;
+    color: var(--red);
+    font-weight: 300;
+    letter-spacing: 2px;
+  }
+
+  .word-romaji {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .card-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .badge {
+    padding: 4px 12px;
+    border: 1px solid;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .badge-jlpt { border-color: var(--red); color: var(--red); background: var(--red-pale); }
+  .badge-pos { border-color: var(--border-strong); color: var(--muted); }
+  .badge-common { border-color: #27ae60; color: #27ae60; background: rgba(39,174,96,0.06); }
+
+  .card-body {
+    padding: 24px 32px;
+  }
+
+  .section {
+    margin-bottom: 24px;
+  }
+
+  .sec-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .senses-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sense-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .sense-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--red);
+    background: var(--red-pale);
+    border: 1px solid rgba(192,57,43,0.2);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .sense-text {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink);
+    flex: 1;
+  }
+
+  .sense-tags {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+  }
+
+  .sense-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+
+  .example-item {
+    padding: 12px 16px;
+    border-left: 3px solid var(--red);
+    background: var(--paper);
+    margin-bottom: 8px;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .ex-jp {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    line-height: 1.5;
+    margin-bottom: 4px;
+  }
+
+  .ex-en {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .tags-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+
+  .word-tag {
+    padding: 4px 10px;
+    background: var(--paper);
+    border: 1px solid var(--border-strong);
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-light);
+  }
+
+  .other-forms {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+
+  .other-form {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    color: var(--ink-light);
+    background: var(--paper);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 2px;
+  }
+
+  .card-footer {
+    padding: 16px 32px;
+    border-top: 1px solid var(--border);
+    background: var(--paper);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .footer-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 22px;
+    border-radius: 2px;
+    border: 2px solid;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--red); border-color: var(--red); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    border-color: var(--border-strong);
+    color: var(--ink-light);
+  }
+  .btn-outline:hover { border-color: var(--ink); color: var(--ink); }
+
+  .btn-red {
+    background: var(--red);
+    border-color: var(--red);
+    color: white;
+  }
+  .btn-red:hover { background: var(--red-light); border-color: var(--red-light); }
+
+  .btn-sm {
+    padding: 7px 14px;
+    font-size: 11px;
+  }
+
+  /* BULK PROGRESS */
+  .bulk-progress {
+    display: none;
+    margin-top: 16px;
+    max-width: 600px;
+  }
+
+  .progress-bar-wrap {
+    background: var(--border);
+    border-radius: 2px;
+    height: 4px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--red);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .bulk-log {
+    max-height: 140px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .log-row {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .log-row.done { color: #27ae60; background: rgba(39,174,96,0.06); }
+  .log-row.error { color: var(--red); background: var(--red-pale); }
+  .log-row.running { color: var(--gold); background: rgba(184,134,11,0.06); }
+  .log-row.pending { color: var(--muted); }
+
+  /* DECK */
+  .deck-section {
+    margin-top: 40px;
+  }
+
+  .deck-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .deck-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .deck-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: white;
+    background: var(--red);
+    padding: 2px 8px;
+    border-radius: 2px;
+  }
+
+  .deck-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .deck-card {
+    background: white;
+    border: 1px solid var(--border-strong);
+    border-radius: 2px;
+    padding: 14px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s;
+  }
+  .deck-card:hover { border-color: var(--red); box-shadow: 3px 3px 0 var(--red); transform: translate(-1px,-1px); }
+
+  .dc-kanji {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .dc-reading {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 12px;
+    color: var(--red);
+    margin-bottom: 6px;
+  }
+  .dc-def {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .dc-del {
+    position: absolute; top: 8px; right: 8px;
+    background: none; border: none; cursor: pointer;
+    color: var(--border-strong); font-size: 14px;
+    transition: color 0.15s;
+    padding: 2px 4px;
+  }
+  .dc-del:hover { color: var(--red); }
+
+  .empty-deck {
+    text-align: center;
+    padding: 40px;
+    border: 2px dashed var(--border);
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .deck-actions {
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+
+  /* EXPORT MODAL */
+  .overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(26,23,20,0.6);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    animation: fadeIn 0.2s;
+  }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  .modal {
+    background: white;
+    border: 2px solid var(--ink);
+    box-shadow: 8px 8px 0 var(--ink);
+    border-radius: 2px;
+    padding: 28px;
+    width: 100%; max-width: 640px;
+    max-height: 85vh;
+    display: flex; flex-direction: column; gap: 16px;
+    animation: slideIn 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  .modal-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .modal-body { font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .modal-body strong { color: var(--ink); }
+
+  .export-ta {
+    width: 100%; height: 200px;
+    border: 1px solid var(--border-strong);
+    border-radius: 2px;
+    padding: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--ink);
+    background: var(--paper);
+    resize: vertical;
+    outline: none;
+  }
+
+  .modal-footer { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* NO RESULT */
+  .no-result {
+    padding: 32px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    background: var(--paper);
+    max-width: 600px;
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="red-stripe"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-left">
+      <div class="jp-title">日本語 · 辞書カードビルダー</div>
+      <h1>Jisho <span>Anki</span> Builder</h1>
+      <p class="subtitle">Free · No API key · Powered by dictionary data</p>
+      <div class="source-badges">
+        <div class="source-badge"><div class="dot"></div> Jisho.org</div>
+        <div class="source-badge"><div class="dot"></div> Tatoeba</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SEARCH -->
+  <div class="search-section">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="単語を入力… e.g. 融合, 食べる, 嬉しい" />
+      <button class="search-btn" id="searchBtn" onclick="searchWord()">検索 Search</button>
+    </div>
+
+    <div class="mode-row">
+      <button class="mode-btn active" id="tabSingle" onclick="setMode('single')">Single</button>
+      <button class="mode-btn" id="tabBulk" onclick="setMode('bulk')">Bulk</button>
+    </div>
+
+    <div id="bulkSection">
+      <textarea id="bulkInput" placeholder="One word per line or comma-separated:&#10;融合&#10;存亡&#10;唇"></textarea>
+      <div class="bulk-controls">
+        <button class="btn btn-primary" id="bulkBtn" onclick="runBulk()">Search All</button>
+        <button class="btn btn-outline btn-sm" id="bulkStopBtn" onclick="stopBulk()" style="display:none">Stop</button>
+        <span id="bulkCountLabel" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div class="bulk-progress" id="bulkProgress">
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+        <div class="bulk-log" id="bulkLog"></div>
+      </div>
+    </div>
+
+    <div id="statusEl" class="status" style="display:none"></div>
+  </div>
+
+  <!-- CARD PREVIEW -->
+  <div id="cardPreview"></div>
+
+  <!-- DECK -->
+  <div class="deck-section">
+    <div class="deck-header">
+      <div class="deck-title">Your Deck</div>
+      <span class="deck-count" id="deckCount">0</span>
+    </div>
+    <div id="deckGrid" class="deck-grid">
+      <div class="empty-deck">No cards yet — search for a word above</div>
+    </div>
+    <div id="deckActions" class="deck-actions" style="display:none">
+      <button class="btn btn-red" onclick="openExport()">Export for Anki</button>
+      <button class="btn btn-outline" onclick="clearDeck()">Clear Deck</button>
+    </div>
+  </div>
+
+  <!-- EXPORT MODAL -->
+  <div id="exportOverlay" class="overlay" style="display:none" onclick="if(event.target===this)closeExport()">
+    <div class="modal">
+      <div class="modal-title">
+        Export for Anki
+        <button class="btn btn-outline btn-sm" onclick="closeExport()">✕ Close</button>
+      </div>
+      <div class="modal-body">
+        <strong>How to import:</strong> Copy all → paste into a <code>.txt</code> file → In Anki: <strong>File → Import</strong> → separator: Tab → select note type <strong>Language Card Forge</strong> → map fields in order.
+      </div>
+      <textarea class="export-ta" id="exportTa" readonly></textarea>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="copyExport()">Copy All</button>
+        <button class="btn btn-outline" onclick="dlExport()">Try Download</button>
+        <span id="copyDone" style="display:none;font-family:'DM Mono',monospace;font-size:11px;color:#27ae60">✓ Copied!</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentCard = null;
+let deck = [];
+let bulkStopped = false;
+
+// ── Mode ───────────────────────────────────────────────────────────────────
+function setMode(m) {
+  const bulk = m === 'bulk';
+  document.getElementById('bulkSection').style.display = bulk ? 'block' : 'none';
+  document.getElementById('tabSingle').classList.toggle('active', !bulk);
+  document.getElementById('tabBulk').classList.toggle('active', bulk);
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchWord();
+});
+
+document.getElementById('bulkInput').addEventListener('input', () => {
+  const words = parseBulk();
+  const el = document.getElementById('bulkCountLabel');
+  el.textContent = words.length ? `${words.length} word${words.length>1?'s':''} detected` : '';
+});
+
+// ── Status ─────────────────────────────────────────────────────────────────
+function showStatus(msg, type='loading') {
+  const el = document.getElementById('statusEl');
+  el.style.display = 'flex';
+  el.className = `status ${type}`;
+  el.innerHTML = type === 'loading'
+    ? `<div class="spinner"></div><span>${msg}</span>`
+    : `<span>${msg}</span>`;
+}
+function hideStatus() { document.getElementById('statusEl').style.display = 'none'; }
+
+// ── CORS Proxy helper ─────────────────────────────────────────────────────
+// Needed when running as a local file:// — browsers block direct API calls
+const PROXY = 'https://corsproxy.io/?url=';
+
+async function fetchWithProxy(url) {
+  // Try direct first (works if served from a server or if CORS is open)
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (res.ok) return res;
+  } catch(e) {}
+  // Fall back to CORS proxy
+  const res = await fetch(PROXY + encodeURIComponent(url));
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  return res;
+}
+
+// ── Jisho API ──────────────────────────────────────────────────────────────
+async function fetchJisho(word) {
+  const url = `https://jisho.org/api/v1/search/words?keyword=${encodeURIComponent(word)}`;
+  const res = await fetchWithProxy(url);
+  const data = await res.json();
+  if (!data.data || !data.data.length) throw new Error('No results found');
+  return data.data[0];
+}
+
+// ── Tatoeba sentences ──────────────────────────────────────────────────────
+async function fetchSentences(word) {
+  try {
+    const url = `https://tatoeba.org/api_v0/search?query=${encodeURIComponent(word)}&from=jpn&to=eng&limit=3`;
+    const res = await fetchWithProxy(url);
+    const data = await res.json();
+    if (!data.results || !data.results.length) return [];
+    return data.results.slice(0, 3).map(r => {
+      const jp = r.text || '';
+      const trans = r.translations?.[0]?.[0]?.text || '';
+      return { jp, en: trans };
+    }).filter(s => s.jp);
+  } catch {
+    return [];
+  }
+}
+
+// ── Build card object from Jisho data ──────────────────────────────────────
+function buildCard(jishoEntry, sentences) {
+  const slug = jishoEntry.slug || '';
+  const japanese = jishoEntry.japanese || [];
+  const senses = jishoEntry.senses || [];
+  const isCommon = jishoEntry.is_common;
+
+  const kanji = japanese[0]?.word || slug;
+  const reading = japanese[0]?.reading || '';
+
+  // JLPT
+  const tags = jishoEntry.tags || [];
+  const jlpt = jishoEntry.jlpt?.length ? jishoEntry.jlpt[jishoEntry.jlpt.length - 1].replace('jlpt-', '').toUpperCase() : '';
+
+  // Parts of speech from first sense
+  const pos = (senses[0]?.parts_of_speech || []).join(', ');
+
+  // Definitions
+  const definitions = senses.map((s, i) => ({
+    num: i + 1,
+    text: (s.english_definitions || []).join('; '),
+    tags: [...(s.parts_of_speech || []), ...(s.tags || []), ...(s.info || [])],
+  })).filter(d => d.text).slice(0, 4);
+
+  // Other forms
+  const otherForms = japanese.slice(1).map(j => j.word || j.reading).filter(Boolean);
+
+  // Word tags
+  const wordTags = [...tags, ...(jishoEntry.jlpt || [])].map(t => t.replace('jlpt-', '').toUpperCase());
+
+  return { kanji, reading, jlpt, pos, isCommon, definitions, otherForms, wordTags, sentences };
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+async function searchWord() {
+  const word = document.getElementById('searchInput').value.trim();
+  if (!word) return;
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  showStatus(`Searching Jisho for "${word}"…`);
+  document.getElementById('cardPreview').innerHTML = '';
+
+  try {
+    const [jishoEntry, sentences] = await Promise.all([
+      fetchJisho(word),
+      fetchSentences(word)
+    ]);
+    const card = buildCard(jishoEntry, sentences);
+    currentCard = card;
+    renderCard(card);
+    hideStatus();
+  } catch(e) {
+    showStatus(`No results found for "${word}"`, 'error');
+    document.getElementById('cardPreview').innerHTML = `<div class="no-result">No results found for "<strong>${word}</strong>" — try a different spelling or the dictionary form.</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Render Card ────────────────────────────────────────────────────────────
+function renderCard(c) {
+  const sensesHtml = c.definitions.map(d => `
+    <li class="sense-item">
+      <div class="sense-num">${d.num}</div>
+      <div class="sense-text">
+        ${d.text}
+        ${d.tags.length ? `<div class="sense-tags">${d.tags.map(t=>`<span class="sense-tag">${t}</span>`).join('')}</div>` : ''}
+      </div>
+    </li>
+  `).join('');
+
+  const examplesHtml = c.sentences.length
+    ? c.sentences.map(s => `
+        <div class="example-item">
+          <div class="ex-jp">${s.jp}</div>
+          ${s.en ? `<div class="ex-en">${s.en}</div>` : ''}
+        </div>
+      `).join('')
+    : '<div class="ex-jp" style="color:var(--muted);font-style:italic;font-size:13px">No example sentences found (Tatoeba may be unavailable)</div>';
+
+  const otherFormsHtml = c.otherForms.length
+    ? `<div class="section"><div class="sec-label">Other Forms</div><div class="other-forms">${c.otherForms.map(f=>`<span class="other-form">${f}</span>`).join('')}</div></div>`
+    : '';
+
+  const tagsHtml = c.wordTags.length
+    ? `<div class="section"><div class="sec-label">Tags</div><div class="tags-row">${c.wordTags.map(t=>`<span class="word-tag">${t}</span>`).join('')}</div></div>`
+    : '';
+
+  document.getElementById('cardPreview').innerHTML = `
+    <div class="card-wrap">
+      <div class="card">
+        <div class="card-top">
+          <div class="word-block">
+            <div class="word-kanji">${c.kanji}</div>
+            <div class="word-reading">${c.reading}</div>
+          </div>
+          <div class="card-badges">
+            ${c.jlpt ? `<span class="badge badge-jlpt">${c.jlpt}</span>` : ''}
+            ${c.isCommon ? `<span class="badge badge-common">Common</span>` : ''}
+            ${c.pos ? `<span class="badge badge-pos">${c.pos.split(',')[0].trim()}</span>` : ''}
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="section">
+            <div class="sec-label">Definitions</div>
+            <ul class="senses-list">${sensesHtml}</ul>
+          </div>
+          <div class="section">
+            <div class="sec-label">Example Sentences · via Tatoeba</div>
+            ${examplesHtml}
+          </div>
+          ${otherFormsHtml}
+          ${tagsHtml}
+        </div>
+        <div class="card-footer">
+          <div class="footer-meta">Source: Jisho.org · JMdict · Tatoeba</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="speakWord('${c.reading || c.kanji}')">🔊 Preview</button>
+            <button class="btn btn-primary btn-sm" onclick="saveCard()">+ Save to Deck</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Audio preview ──────────────────────────────────────────────────────────
+function speakWord(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  const voices = window.speechSynthesis.getVoices();
+  const ja = voices.find(v => v.lang.startsWith('ja'));
+  if (ja) utt.voice = ja;
+  utt.rate = 0.85;
+  window.speechSynthesis.speak(utt);
+}
+window.speechSynthesis?.getVoices();
+window.speechSynthesis?.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
+
+// ── Save card ──────────────────────────────────────────────────────────────
+function saveCard() {
+  if (!currentCard) return;
+  if (deck.find(c => c.kanji === currentCard.kanji)) {
+    alert('Already in your deck!'); return;
+  }
+  deck.push({...currentCard});
+  renderDeck();
+}
+
+// ── Deck ───────────────────────────────────────────────────────────────────
+function renderDeck() {
+  const grid = document.getElementById('deckGrid');
+  const count = document.getElementById('deckCount');
+  const actions = document.getElementById('deckActions');
+  count.textContent = deck.length;
+  actions.style.display = deck.length ? 'flex' : 'none';
+
+  if (!deck.length) {
+    grid.innerHTML = '<div class="empty-deck">No cards yet — search for a word above</div>';
+    return;
+  }
+  grid.innerHTML = deck.map((c, i) => `
+    <div class="deck-card" onclick="previewDeckCard(${i})">
+      <button class="dc-del" onclick="event.stopPropagation();deleteDeckCard(${i})">✕</button>
+      <div class="dc-kanji">${c.kanji}</div>
+      <div class="dc-reading">${c.reading}</div>
+      <div class="dc-def">${c.definitions[0]?.text || ''}</div>
+    </div>
+  `).join('');
+}
+
+function previewDeckCard(i) {
+  currentCard = deck[i];
+  renderCard(currentCard);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function deleteDeckCard(i) {
+  deck.splice(i, 1);
+  renderDeck();
+}
+
+function clearDeck() {
+  if (confirm('Clear all saved cards?')) { deck = []; renderDeck(); }
+}
+
+// ── Bulk ───────────────────────────────────────────────────────────────────
+function parseBulk() {
+  const raw = document.getElementById('bulkInput').value.trim();
+  if (!raw) return [];
+  const words = raw.includes('\n') ? raw.split('\n') : raw.split(',');
+  return words.map(w => w.trim()).filter(Boolean).filter((w,i,a) => a.indexOf(w)===i);
+}
+
+async function runBulk() {
+  const words = parseBulk();
+  if (!words.length) return;
+  bulkStopped = false;
+
+  const btn = document.getElementById('bulkBtn');
+  const stopBtn = document.getElementById('bulkStopBtn');
+  const progress = document.getElementById('bulkProgress');
+  const log = document.getElementById('bulkLog');
+  const fill = document.getElementById('progressFill');
+
+  btn.disabled = true;
+  stopBtn.style.display = 'inline-block';
+  progress.style.display = 'block';
+  log.innerHTML = words.map((w,i) => `<div class="log-row pending" id="blog_${i}">⏳ ${w}</div>`).join('');
+
+  let done = 0;
+  for (let i = 0; i < words.length; i++) {
+    if (bulkStopped) break;
+    const word = words[i];
+    const row = document.getElementById(`blog_${i}`);
+    row.className = 'log-row running';
+    row.innerHTML = `<div class="spinner" style="width:9px;height:9px;border-width:1.5px"></div> ${word}`;
+    fill.style.width = `${(i / words.length) * 100}%`;
+
+    try {
+      const [jishoEntry, sentences] = await Promise.all([fetchJisho(word), fetchSentences(word)]);
+      const card = buildCard(jishoEntry, sentences);
+      if (!deck.find(c => c.kanji === card.kanji)) {
+        deck.push(card);
+        currentCard = card;
+        renderCard(card);
+        renderDeck();
+        done++;
+      }
+      row.className = 'log-row done';
+      row.innerHTML = `✓ ${card.kanji} ${card.reading ? `(${card.reading})` : ''} — ${card.definitions[0]?.text?.slice(0,40) || ''}`;
+    } catch(e) {
+      row.className = 'log-row error';
+      row.innerHTML = `✕ Not found: ${word}`;
+    }
+
+    if (i < words.length - 1 && !bulkStopped) await new Promise(r => setTimeout(r, 400));
+  }
+
+  fill.style.width = '100%';
+  btn.disabled = false;
+  stopBtn.style.display = 'none';
+}
+
+function stopBulk() {
+  bulkStopped = true;
+  document.getElementById('bulkStopBtn').style.display = 'none';
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function buildExport() {
+  const header = ['Word','Reading','IPA','PartOfSpeech','Level','Definition','NativeDefinition','Examples','Synonyms','Antonyms','Etymology','Mnemonic','Collocations','Register','Audio','Tags'].join('\t');
+  const rows = deck.map(c => {
+    const def = c.definitions.map(d => d.text).join(' | ');
+    const examples = c.sentences.map(s => s.jp + (s.en ? ` (${s.en})` : '')).join(' | ');
+    const fields = [
+      c.kanji,
+      c.reading,
+      '',
+      c.pos,
+      c.jlpt,
+      c.definitions[0]?.text || '',
+      '',
+      examples,
+      '', '', '', '', '', '',
+      '',
+      c.wordTags.join(' ')
+    ];
+    return fields.join('\t');
+  });
+  return [header, ...rows].join('\n');
+}
+
+function openExport() {
+  document.getElementById('exportTa').value = buildExport();
+  document.getElementById('exportOverlay').style.display = 'flex';
+  document.getElementById('copyDone').style.display = 'none';
+}
+
+function closeExport() {
+  document.getElementById('exportOverlay').style.display = 'none';
+}
+
+function copyExport() {
+  const ta = document.getElementById('exportTa');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).catch(() => document.execCommand('copy'));
+  document.getElementById('copyDone').style.display = 'inline';
+  setTimeout(() => document.getElementById('copyDone').style.display = 'none', 2500);
+}
+
+function dlExport() {
+  const content = buildExport();
+  const a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+  a.download = 'jisho_anki_cards.txt';
+  a.click();
+}
+</script>
+</body>
+</html>
